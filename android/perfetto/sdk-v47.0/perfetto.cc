@@ -50306,8 +50306,13 @@ void TracingServiceImpl::EmitSystemInfo(std::vector<TracePacket>* packets) {
     utsname_info->set_machine(uname_info.machine);
     utsname_info->set_release(uname_info.release);
   }
-  info->set_page_size(static_cast<uint32_t>(sysconf(_SC_PAGESIZE)));
-  info->set_num_cpus(static_cast<uint32_t>(sysconf(_SC_NPROCESSORS_CONF)));
+  long page_size = sysconf(_SC_PAGESIZE);
+  if (page_size > 0)
+    info->set_page_size(static_cast<uint32_t>(page_size));
+
+  long num_cpus = sysconf(_SC_NPROCESSORS_CONF);
+  if (num_cpus > 0)
+    info->set_num_cpus(static_cast<uint32_t>(num_cpus));
 #endif  // !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID)
   std::string fingerprint_value = base::GetAndroidProp("ro.build.fingerprint");
