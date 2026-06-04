@@ -2324,8 +2324,12 @@ bool ReadFileDescriptor(int fd, std::string* out) {
 
   struct stat buf {};
   if (fstat(fd, &buf) != -1) {
-    if (buf.st_size > 0)
-      out->resize(i + static_cast<size_t>(buf.st_size));
+    if (buf.st_size > 0) {
+      size_t st_size = static_cast<size_t>(buf.st_size);
+      if (st_size > std::numeric_limits<size_t>::max() - i)
+        return false;
+      out->resize(i + st_size);
+    }
   }
 
   ssize_t bytes_read;
@@ -2335,6 +2339,9 @@ bool ReadFileDescriptor(int fd, std::string* out) {
 
     bytes_read = Read(fd, &((*out)[i]), kBufSize);
     if (bytes_read > 0) {
+      if (static_cast<size_t>(bytes_read) >
+          std::numeric_limits<size_t>::max() - i)
+        return false;
       i += static_cast<size_t>(bytes_read);
     } else {
       out->resize(i);
@@ -56650,7 +56657,7 @@ SockaddrAny MakeSockAddr(SockFamily family, const std::string& socket_name) {
     case SockFamily::kUnix: {
       struct sockaddr_un saddr {};
       const size_t name_len = socket_name.size();
-      if (name_len + 1 /* for trailing \0 */ >= sizeof(saddr.sun_path)) {
+      if (name_len >= sizeof(saddr.sun_path) - 1) {
         errno = ENAMETOOLONG;
         return SockaddrAny();
       }
