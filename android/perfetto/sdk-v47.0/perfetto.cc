@@ -33364,6 +33364,10 @@ bool SharedMemoryArbiterImpl::ReplaceCommitPlaceholderBufferIdsLocked() {
       continue;
     const auto it = target_buffer_reservations_.find(chunk.target_buffer());
     PERFETTO_DCHECK(it != target_buffer_reservations_.end());
+    if (it == target_buffer_reservations_.end()) {
+      all_placeholders_replaced = false;
+      continue;
+    }
     if (!it->second.resolved) {
       all_placeholders_replaced = false;
       continue;
@@ -33375,6 +33379,10 @@ bool SharedMemoryArbiterImpl::ReplaceCommitPlaceholderBufferIdsLocked() {
       continue;
     const auto it = target_buffer_reservations_.find(chunk.target_buffer());
     PERFETTO_DCHECK(it != target_buffer_reservations_.end());
+    if (it == target_buffer_reservations_.end()) {
+      all_placeholders_replaced = false;
+      continue;
+    }
     if (!it->second.resolved) {
       all_placeholders_replaced = false;
       continue;
