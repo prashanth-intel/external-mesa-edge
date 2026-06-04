@@ -56881,8 +56881,9 @@ UnixSocketRaw::UnixSocketRaw(ScopedSocketHandle fd,
     int flag = 1;
     // Disable Nagle's algorithm, optimize for low-latency.
     // See https://github.com/google/perfetto/issues/70.
-    setsockopt(*fd_, IPPROTO_TCP, TCP_NODELAY,
-               reinterpret_cast<const char*>(&flag), sizeof(flag));
+    PERFETTO_CHECK(!setsockopt(*fd_, IPPROTO_TCP, TCP_NODELAY,
+                               reinterpret_cast<const char*>(&flag),
+                               sizeof(flag)));
   }
 
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
