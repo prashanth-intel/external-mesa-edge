@@ -5674,10 +5674,11 @@ std::string StripChars(const std::string& str,
                        const std::string& chars,
                        char replacement) {
   std::string res(str);
-  const char* start = res.c_str();
-  const char* remove = chars.c_str();
-  for (const char* c = strpbrk(start, remove); c; c = strpbrk(c + 1, remove))
-    res[static_cast<uintptr_t>(c - start)] = replacement;
+  size_t pos = res.find_first_of(chars);
+  while (pos != std::string::npos) {
+    res[pos] = replacement;
+    pos = res.find_first_of(chars, pos + 1);
+  }
   return res;
 }
 
@@ -59786,7 +59787,8 @@ HostImpl::~HostImpl() = default;
 
 bool HostImpl::ExposeService(std::unique_ptr<Service> service) {
   PERFETTO_DCHECK_THREAD(thread_checker_);
-  const std::string& service_name = service->GetDescriptor().service_name;
+  auto service_descriptor = service->GetDescriptor();
+  const std::string& service_name = service_descriptor.service_name;
   if (GetServiceByName(service_name)) {
     PERFETTO_DLOG("Duplicate ExposeService(): %s", service_name.c_str());
     return false;
