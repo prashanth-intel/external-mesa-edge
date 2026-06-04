@@ -4834,7 +4834,7 @@ void PeriodicTask::RunTaskAndPostNext(WeakPtr<PeriodicTask> thiz,
     // just need to read() it.
     uint64_t ignored = 0;
     errno = 0;
-    auto rsize = Read(*thiz->timer_fd_, &ignored, sizeof(&ignored));
+    auto rsize = Read(*thiz->timer_fd_, &ignored, sizeof(ignored));
     if (rsize != sizeof(uint64_t)) {
       if (errno == EAGAIN)
         return;  // A spurious wakeup. Rare, but can happen, just ignore.
