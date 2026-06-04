@@ -39063,8 +39063,8 @@ void TracingMuxerImpl::Shutdown() {
   PERFETTO_CHECK(!muxer->task_runner_->RunsTasksOnCurrentThread());
   muxer->DestroyStoppedTraceWritersForCurrentThread();
 
-  std::unique_ptr<base::TaskRunner> owned_task_runner(
-      muxer->task_runner_.get());
+  std::unique_ptr<base::TaskRunner> owned_task_runner =
+    std::move(muxer->task_runner_);
   base::WaitableEvent shutdown_done;
   owned_task_runner->PostTask([muxer, &shutdown_done] {
     // Check that no consumer session is currently active on any backend.
@@ -39081,7 +39081,6 @@ void TracingMuxerImpl::Shutdown() {
     muxer->DestroyStoppedTraceWritersForCurrentThread();
     // The task runner must be deleted outside the muxer thread. This is done by
     // `owned_task_runner` above.
-    muxer->task_runner_.release();
     auto* platform = muxer->platform_;
     delete muxer;
     instance_ = TracingMuxerFake::Get();
