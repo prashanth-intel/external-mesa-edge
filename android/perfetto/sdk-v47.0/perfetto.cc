@@ -47835,6 +47835,10 @@ void TracingServiceImpl::ChangeTraceConfig(ConsumerEndpointImpl* consumer,
   TracingSession* tracing_session =
       GetTracingSession(consumer->tracing_session_id_);
   PERFETTO_DCHECK(tracing_session);
+  if (!tracing_session) {
+    PERFETTO_ELOG("ChangeTraceConfig() failed due to missing tracing session");
+    return;
+  }
 
   if ((tracing_session->state != TracingSession::STARTED) &&
       (tracing_session->state != TracingSession::CONFIGURED)) {
