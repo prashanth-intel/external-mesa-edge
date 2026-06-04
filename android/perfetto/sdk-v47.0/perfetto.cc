@@ -2405,7 +2405,16 @@ ssize_t WriteAll(int fd, const void* buf, size_t count) {
       break;
     if (wr < 0)
       return wr;
+    if (static_cast<size_t>(wr) >
+        static_cast<size_t>(std::numeric_limits<ssize_t>::max()) - written) {
+      errno = EOVERFLOW;
+      return -1;
+    }
     written += static_cast<size_t>(wr);
+  }
+  if (written > static_cast<size_t>(std::numeric_limits<ssize_t>::max())) {
+    errno = EOVERFLOW;
+    return -1;
   }
   return static_cast<ssize_t>(written);
 }
@@ -57059,6 +57068,10 @@ ssize_t UnixSocketRaw::SendMsgAllPosix(struct msghdr* msg) {
     } else if (send_res <= 0) {
       return send_res;  // An error occurred.
     } else {
+      if (send_res > std::numeric_limits<ssize_t>::max() - total_sent) {
+        errno = EOVERFLOW;
+        return -1;
+      }
       total_sent += send_res;
       ShiftMsgHdrPosix(static_cast<size_t>(send_res), msg);
       // Only send the ancillary data with the first sendmsg call.
