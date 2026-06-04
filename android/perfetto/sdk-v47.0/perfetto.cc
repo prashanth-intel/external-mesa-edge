@@ -32947,6 +32947,11 @@ void SharedMemoryArbiterImpl::FlushPendingCommitDataRequests(
 
     // May be called by TraceWriterImpl on any thread.
     base::TaskRunner* task_runner = task_runner_;
+    if (!task_runner) {
+      if (callback)
+        pending_flush_callbacks_.push_back(std::move(callback));
+      return;
+    }
     if (!task_runner->RunsTasksOnCurrentThread()) {
       // We shouldn't post a task while holding a lock. |task_runner| remains
       // valid after unlocking, because |task_runner_| is never reset.
