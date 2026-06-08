@@ -5996,7 +5996,9 @@ TempFile TempFile::Create() {
   temp_file.fd_.reset(_open_osfhandle(reinterpret_cast<intptr_t>(h), 0));
 #else
   temp_file.path_ = GetSysTempDir() + "/perfetto-XXXXXXXX";
+  const mode_t old_umask = umask(0177);
   temp_file.fd_.reset(mkstemp(&temp_file.path_[0]));
+  umask(old_umask);
   PERFETTO_CHECK(unlink(temp_file.path_.c_str()) == 0);
 #endif
   if (PERFETTO_UNLIKELY(!temp_file.fd_)) {
