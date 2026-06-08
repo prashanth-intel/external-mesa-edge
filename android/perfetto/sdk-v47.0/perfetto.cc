@@ -2334,6 +2334,8 @@ bool ReadFileDescriptor(int fd, std::string* out) {
 
   ssize_t bytes_read;
   for (;;) {
+    if (i > std::numeric_limits<size_t>::max() - kBufSize)
+      return false;
     if (out->size() < i + kBufSize)
       out->resize(out->size() + kBufSize);
 
@@ -56701,7 +56703,7 @@ SockaddrAny MakeSockAddr(SockFamily family, const std::string& socket_name) {
       // Abstract sockets do NOT require a trailing null terminator (which is
       // instad mandatory for filesystem sockets). Any byte up to `size`,
       // including '\0' will become part of the socket name.
-      if (saddr.sun_path[0] == '\0')
+      if (saddr.sun_path[0] == '\0' && size > 0)
         --size;
       PERFETTO_CHECK(static_cast<size_t>(size) <= sizeof(saddr));
       return SockaddrAny(&saddr, size);
