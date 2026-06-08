@@ -59826,9 +59826,10 @@ void HostImpl::AdoptConnectedSocket_Fuchsia(
       std::move(connected_socket), this, task_runner_, kHostSockFamily,
       base::SockType::kStream);
 
-  auto* unix_socket_ptr = unix_socket.get();
   OnNewIncomingConnection(nullptr, std::move(unix_socket));
-  ClientConnection* client_connection = clients_by_socket_[unix_socket_ptr];
+  // Look up the ClientConnection via clients_ instead of using a raw pointer
+  // saved from the moved-from wrapper (CID 6196379, wrapper-use-after-free).
+  ClientConnection* client_connection = clients_[last_client_id_].get();
   client_connection->send_fd_cb_fuchsia = std::move(send_fd_cb);
   PERFETTO_DCHECK(client_connection->send_fd_cb_fuchsia);
 }
