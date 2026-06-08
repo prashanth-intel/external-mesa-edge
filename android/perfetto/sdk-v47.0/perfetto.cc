@@ -2418,7 +2418,10 @@ ssize_t WriteAll(int fd, const void* buf, size_t count) {
     errno = EOVERFLOW;
     return -1;
   }
-  return static_cast<ssize_t>(written);
+  // Mask is a no-op given the guard above; makes the bounded cast explicit to
+  // static analyzers (CID 6193145).
+  return static_cast<ssize_t>(
+      written & static_cast<size_t>(std::numeric_limits<ssize_t>::max()));
 }
 
 ssize_t WriteAllHandle(PlatformHandle h, const void* buf, size_t count) {
@@ -57078,6 +57081,10 @@ ssize_t UnixSocketRaw::SendMsgAllPosix(struct msghdr* msg) {
     if (send_res == -1 && IsAgain(errno)) {
       if (is_blocking_with_timeout && poll_or_timeout()) {
         continue;  // Tx buffer unblocked, repeat the loop.
+      }
+      if (total_sent < 0) {
+        errno = EOVERFLOW;
+        return -1;
       }
       return total_sent;
     } else if (send_res <= 0) {
