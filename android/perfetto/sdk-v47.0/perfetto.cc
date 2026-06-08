@@ -46938,8 +46938,7 @@ std::tuple<size_t /*shm_size*/, size_t /*page_size*/> EnsureValidShmSizes(
 
   // Only allow power of two numbers of pages, i.e. 1, 2, 4, 8 pages.
   size_t num_pages = page_size / SharedMemoryABI::kMinPageSize;
-  page_size_is_valid &= num_pages != 0;
-  page_size_is_valid &= (num_pages & (num_pages - 1)) == 0;
+  page_size_is_valid &= (num_pages != 0 && (num_pages & (num_pages - 1)) == 0);
 
   if (!page_size_is_valid || shm_size < page_size ||
       shm_size % page_size != 0) {
