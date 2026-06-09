@@ -59845,11 +59845,12 @@ void HostImpl::OnNewIncomingConnection(
   PERFETTO_DCHECK_THREAD(thread_checker_);
   std::unique_ptr<ClientConnection> client(new ClientConnection());
   ClientID client_id = ++last_client_id_;
-  clients_by_socket_[new_conn.get()] = client.get();
+  base::UnixSocket* sock_ptr = new_conn.get();
   client->id = client_id;
   client->sock = std::move(new_conn);
   client->sock->SetTxTimeout(socket_tx_timeout_ms_);
   clients_[client_id] = std::move(client);
+  clients_by_socket_[sock_ptr] = clients_[client_id].get();
 }
 
 void HostImpl::OnDataAvailable(base::UnixSocket* sock) {
