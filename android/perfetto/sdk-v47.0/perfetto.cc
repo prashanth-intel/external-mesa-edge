@@ -2346,6 +2346,8 @@ bool ReadFileDescriptor(int fd, std::string* out) {
         return false;
       i += static_cast<size_t>(bytes_read);
     } else {
+      if (i > out->size())
+        return false;
       out->resize(i);
       return bytes_read == 0;
     }
