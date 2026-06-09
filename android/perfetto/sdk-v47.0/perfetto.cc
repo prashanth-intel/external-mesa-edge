@@ -57075,33 +57075,32 @@ ssize_t UnixSocketRaw::SendMsgAllPosix(struct msghdr* msg) {
   int send_flags = MSG_NOSIGNAL | (is_blocking_with_timeout ? MSG_DONTWAIT : 0);
 #endif
 
-  ssize_t total_sent = 0;
+  constexpr size_t kSSizeMax =
+      static_cast<size_t>(std::numeric_limits<ssize_t>::max());
+  size_t total_sent = 0;
   while (msg->msg_iov) {
     ssize_t send_res = PERFETTO_EINTR(sendmsg(*fd_, msg, send_flags));
     if (send_res == -1 && IsAgain(errno)) {
       if (is_blocking_with_timeout && poll_or_timeout()) {
         continue;  // Tx buffer unblocked, repeat the loop.
       }
-      if (total_sent < 0) {
-        errno = EOVERFLOW;
-        return -1;
-      }
-      return total_sent;
+      return static_cast<ssize_t>(total_sent);
     } else if (send_res <= 0) {
       return send_res;  // An error occurred.
     } else {
-      if (send_res > std::numeric_limits<ssize_t>::max() - total_sent) {
+      const size_t send_res_size = static_cast<size_t>(send_res);
+      if (send_res_size > kSSizeMax - total_sent) {
         errno = EOVERFLOW;
         return -1;
       }
-      total_sent += send_res;
-      ShiftMsgHdrPosix(static_cast<size_t>(send_res), msg);
+      total_sent += send_res_size;
+      ShiftMsgHdrPosix(send_res_size, msg);
       // Only send the ancillary data with the first sendmsg call.
       msg->msg_control = nullptr;
       msg->msg_controllen = 0;
     }
   }
-  return total_sent;
+  return static_cast<ssize_t>(total_sent);
 }
 
 ssize_t UnixSocketRaw::Send(const void* msg,
