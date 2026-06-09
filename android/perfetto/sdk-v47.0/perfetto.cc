@@ -5246,8 +5246,10 @@ Status ErrStatus(const char* format, ...) {
   char buffer[1024];
   va_list ap;
   va_start(ap, format);
-  vsnprintf(buffer, sizeof(buffer), format, ap);
+  int ret = vsnprintf(buffer, sizeof(buffer), format, ap);
   va_end(ap);
+  if (ret < 0)
+    buffer[0] = '\0';
   Status status(buffer);
   return status;
 }
