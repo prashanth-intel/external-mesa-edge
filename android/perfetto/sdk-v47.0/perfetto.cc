@@ -2420,10 +2420,8 @@ ssize_t WriteAll(int fd, const void* buf, size_t count) {
     errno = EOVERFLOW;
     return -1;
   }
-  // Mask is a no-op given the guard above; makes the bounded cast explicit to
-  // static analyzers (CID 6193145).
-  return static_cast<ssize_t>(
-      written & static_cast<size_t>(std::numeric_limits<ssize_t>::max()));
+  // Guard above ensures written <= SSIZE_MAX; direct cast is safe.
+  return static_cast<ssize_t>(written);
 }
 
 ssize_t WriteAllHandle(PlatformHandle h, const void* buf, size_t count) {
