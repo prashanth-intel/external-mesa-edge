@@ -37977,7 +37977,7 @@ void TracingMuxerImpl::StopDataSource_AsyncEnd(TracingBackendId backend_id,
                         : nullptr;
     if (arbiter)
       arbiter->FlushPendingCommitDataRequests();
-    if (instance_id && will_notify_on_stop)
+    if (instance_id && will_notify_on_stop && producer->service_)
       producer->service_->NotifyDataSourceStopped(instance_id);
   }
   producer->SweepDeadServices();
