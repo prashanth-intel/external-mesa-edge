@@ -2348,7 +2348,10 @@ bool ReadFileDescriptor(int fd, std::string* out) {
     } else {
       if (i > out->size())
         return false;
-      out->resize(i);
+      // Use min to provide an explicit upper bound on i that Coverity can verify;
+      // the guard above already ensures i <= out->size(), so this is a no-op at
+      // runtime but makes the resize argument provably bounded to the analyzer.
+      out->resize(std::min(i, out->size()));
       return bytes_read == 0;
     }
   }
