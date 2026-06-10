@@ -2396,6 +2396,14 @@ bool ReadFile(const std::string& path, std::string* out) {
 }
 
 ssize_t WriteAll(int fd, const void* buf, size_t count) {
+  // Clamp count to SSIZE_MAX so written <= count <= SSIZE_MAX is provable
+  // throughout the function, making the final ssize_t cast unambiguous.
+  constexpr size_t kSSizeMax =
+      static_cast<size_t>(std::numeric_limits<ssize_t>::max());
+  if (count > kSSizeMax) {
+    errno = EOVERFLOW;
+    return -1;
+  }
   size_t written = 0;
   while (written < count) {
     // write() on windows takes an unsigned int size.
@@ -2409,18 +2417,8 @@ ssize_t WriteAll(int fd, const void* buf, size_t count) {
       break;
     if (wr < 0)
       return wr;
-    if (static_cast<size_t>(wr) >
-        static_cast<size_t>(std::numeric_limits<ssize_t>::max()) - written) {
-      errno = EOVERFLOW;
-      return -1;
-    }
     written += static_cast<size_t>(wr);
   }
-  if (written > static_cast<size_t>(std::numeric_limits<ssize_t>::max())) {
-    errno = EOVERFLOW;
-    return -1;
-  }
-  // Guard above ensures written <= SSIZE_MAX; direct cast is safe.
   return static_cast<ssize_t>(written);
 }
 
