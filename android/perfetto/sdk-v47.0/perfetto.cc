@@ -5672,10 +5672,11 @@ std::string StripChars(const std::string& str,
                        const std::string& chars,
                        char replacement) {
   std::string res(str);
-  const char* start = res.c_str();
-  const char* remove = chars.c_str();
-  for (const char* c = strpbrk(start, remove); c; c = strpbrk(c + 1, remove))
-    res[static_cast<uintptr_t>(c - start)] = replacement;
+  size_t pos = res.find_first_of(chars);
+  while (pos != std::string::npos) {
+    res[pos] = replacement;
+    pos = res.find_first_of(chars, pos + 1);
+  }
   return res;
 }
 
@@ -59781,7 +59782,8 @@ HostImpl::~HostImpl() = default;
 
 bool HostImpl::ExposeService(std::unique_ptr<Service> service) {
   PERFETTO_DCHECK_THREAD(thread_checker_);
-  const std::string& service_name = service->GetDescriptor().service_name;
+  auto service_descriptor = service->GetDescriptor();
+  const std::string& service_name = service_descriptor.service_name;
   if (GetServiceByName(service_name)) {
     PERFETTO_DLOG("Duplicate ExposeService(): %s", service_name.c_str());
     return false;
@@ -59806,9 +59808,10 @@ void HostImpl::AdoptConnectedSocket_Fuchsia(
       std::move(connected_socket), this, task_runner_, kHostSockFamily,
       base::SockType::kStream);
 
-  auto* unix_socket_ptr = unix_socket.get();
   OnNewIncomingConnection(nullptr, std::move(unix_socket));
-  ClientConnection* client_connection = clients_by_socket_[unix_socket_ptr];
+  // Look up the ClientConnection via clients_ instead of using a raw pointer
+  // saved from the moved-from wrapper (CID 6196379, wrapper-use-after-free).
+  ClientConnection* client_connection = clients_[last_client_id_].get();
   client_connection->send_fd_cb_fuchsia = std::move(send_fd_cb);
   PERFETTO_DCHECK(client_connection->send_fd_cb_fuchsia);
 }
@@ -59825,11 +59828,12 @@ void HostImpl::OnNewIncomingConnection(
   PERFETTO_DCHECK_THREAD(thread_checker_);
   std::unique_ptr<ClientConnection> client(new ClientConnection());
   ClientID client_id = ++last_client_id_;
-  clients_by_socket_[new_conn.get()] = client.get();
+  base::UnixSocket* sock_ptr = new_conn.get();
   client->id = client_id;
   client->sock = std::move(new_conn);
   client->sock->SetTxTimeout(socket_tx_timeout_ms_);
   clients_[client_id] = std::move(client);
+  clients_by_socket_[sock_ptr] = clients_[client_id].get();
 }
 
 void HostImpl::OnDataAvailable(base::UnixSocket* sock) {
