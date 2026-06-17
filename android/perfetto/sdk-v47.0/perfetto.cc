@@ -5239,8 +5239,10 @@ Status ErrStatus(const char* format, ...) {
   char buffer[1024];
   va_list ap;
   va_start(ap, format);
-  vsnprintf(buffer, sizeof(buffer), format, ap);
+  int ret = vsnprintf(buffer, sizeof(buffer), format, ap);
   va_end(ap);
+  if (ret < 0)
+    buffer[0] = '\0';
   Status status(buffer);
   return status;
 }
@@ -56882,8 +56884,9 @@ UnixSocketRaw::UnixSocketRaw(ScopedSocketHandle fd,
     int flag = 1;
     // Disable Nagle's algorithm, optimize for low-latency.
     // See https://github.com/google/perfetto/issues/70.
-    setsockopt(*fd_, IPPROTO_TCP, TCP_NODELAY,
-               reinterpret_cast<const char*>(&flag), sizeof(flag));
+    PERFETTO_CHECK(!setsockopt(*fd_, IPPROTO_TCP, TCP_NODELAY,
+                               reinterpret_cast<const char*>(&flag),
+                               sizeof(flag)));
   }
 
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
