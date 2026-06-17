@@ -2324,20 +2324,34 @@ bool ReadFileDescriptor(int fd, std::string* out) {
 
   struct stat buf {};
   if (fstat(fd, &buf) != -1) {
-    if (buf.st_size > 0)
-      out->resize(i + static_cast<size_t>(buf.st_size));
+    if (buf.st_size > 0) {
+      size_t st_size = static_cast<size_t>(buf.st_size);
+      if (st_size > std::numeric_limits<size_t>::max() - i)
+        return false;
+      out->resize(i + st_size);
+    }
   }
 
   ssize_t bytes_read;
   for (;;) {
+    if (i > std::numeric_limits<size_t>::max() - kBufSize)
+      return false;
     if (out->size() < i + kBufSize)
       out->resize(out->size() + kBufSize);
 
     bytes_read = Read(fd, &((*out)[i]), kBufSize);
     if (bytes_read > 0) {
+      if (static_cast<size_t>(bytes_read) >
+          std::numeric_limits<size_t>::max() - i)
+        return false;
       i += static_cast<size_t>(bytes_read);
     } else {
-      out->resize(i);
+      if (i > out->size())
+        return false;
+      // Use min to provide an explicit upper bound on i that Coverity can verify;
+      // the guard above already ensures i <= out->size(), so this is a no-op at
+      // runtime but makes the resize argument provably bounded to the analyzer.
+      out->resize(std::min(i, out->size()));
       return bytes_read == 0;
     }
   }
@@ -56651,7 +56665,7 @@ SockaddrAny MakeSockAddr(SockFamily family, const std::string& socket_name) {
     case SockFamily::kUnix: {
       struct sockaddr_un saddr {};
       const size_t name_len = socket_name.size();
-      if (name_len + 1 /* for trailing \0 */ >= sizeof(saddr.sun_path)) {
+      if (name_len >= sizeof(saddr.sun_path) - 1) {
         errno = ENAMETOOLONG;
         return SockaddrAny();
       }
@@ -56674,7 +56688,7 @@ SockaddrAny MakeSockAddr(SockFamily family, const std::string& socket_name) {
       // Abstract sockets do NOT require a trailing null terminator (which is
       // instad mandatory for filesystem sockets). Any byte up to `size`,
       // including '\0' will become part of the socket name.
-      if (saddr.sun_path[0] == '\0')
+      if (saddr.sun_path[0] == '\0' && size > 0)
         --size;
       PERFETTO_CHECK(static_cast<size_t>(size) <= sizeof(saddr));
       return SockaddrAny(&saddr, size);
